@@ -4,7 +4,8 @@ public class Main {
 
     public static final Map<Integer, Integer> sizeToFreq = new HashMap<>();
     static final int NUMBER_OF_ROUTES = 1000;
-    static int processedNumber;
+    static int maxKey = 0;
+    static int maxValue = 0;
 
     public static void main(String[] args) throws InterruptedException {
 
@@ -12,53 +13,48 @@ public class Main {
         for (int i = 0; i < routes.length; i++) {
             routes[i] = generateRoute("RLRFR", 100);
         }
+        Thread countingThread;
+        Thread countMaximum;
+        countingThread = new Thread(() -> {
+            for (String route : routes) {
 
-        for (String string : routes) {
-            new Thread(() -> {
                 int count = 0;
-                for (int j = 0; j < string.length(); j++) {
-                    String right = String.valueOf(string.charAt(j));
+                for (int j = 0; j < route.length(); j++) {
+                    String right = String.valueOf(route.charAt(j));
                     if (right.equals("R"))
                         count++;
                 }
-
                 synchronized (sizeToFreq) {
                     sizeToFreq.merge(count, 1, Integer::sum);
-                    processedNumber++;
                     sizeToFreq.notify();
                 }
-            }).start();
-        }
+            }
+        });
 
-        new Thread(() -> {
+        countMaximum = new Thread(() -> {
             synchronized (sizeToFreq) {
-
-                while (processedNumber < NUMBER_OF_ROUTES) {
+                while (!Thread.interrupted()) {
                     try {
                         sizeToFreq.wait();
                     } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
+                        return;
                     }
-                }
-
-                int maxKey = 0;
-                int maxValue = 0;
-
-                for (int i : sizeToFreq.keySet()) {
-                    if (sizeToFreq.get(i) > maxValue) {
-                        maxKey = i;
-                        maxValue = sizeToFreq.get(i);
+                    for (int i : sizeToFreq.keySet()) {
+                        if (sizeToFreq.get(i) > maxValue) {
+                            maxKey = i;
+                            maxValue = sizeToFreq.get(i);
+                            System.out.printf("Новый лидер %d (встретилось %d раз)\n", maxKey, maxValue);
+                        }
                     }
-                }
 
-                System.out.printf("Самое частое колличество повторений %d (встретилось %d раз)\n", maxKey, maxValue);
-                sizeToFreq.remove(maxKey);
-                System.out.println("Другие размеры:");
-                for (int keys : sizeToFreq.keySet()) {
-                    System.out.printf("- %d (%d раз) \n", keys, sizeToFreq.get(keys));
                 }
             }
-        }).start();
+        });
+        countingThread.start();
+        countMaximum.start();
+        countingThread.join();
+        countingThread.interrupt();
+        countMaximum.interrupt();
     }
 
     public static String generateRoute(String letters, int length) {
