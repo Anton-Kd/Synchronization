@@ -8,20 +8,9 @@ public class Main {
 
     public static void main(String[] args) throws InterruptedException {
 
-        String[] routes = new String[NUMBER_OF_ROUTES];
-        for (int i = 0; i < routes.length; i++) {
-            routes[i] = generateRoute("RLRFR", 100);
-        }
-
-        for (String string : routes) {
+        for (int i = 0; i < NUMBER_OF_ROUTES; i++) {
             new Thread(() -> {
-                int count = 0;
-                for (int j = 0; j < string.length(); j++) {
-                    String right = String.valueOf(string.charAt(j));
-                    if (right.equals("R"))
-                        count++;
-                }
-
+                int count = countSymbol_R(generateRoute("RLRFR", 100));
                 synchronized (sizeToFreq) {
                     sizeToFreq.merge(count, 1, Integer::sum);
                     processedNumber++;
@@ -59,6 +48,16 @@ public class Main {
                 }
             }
         }).start();
+    }
+
+    public static int countSymbol_R(String route) {
+        int count = 0;
+        for (int i = 0; i < route.length(); i++) {
+            String right = String.valueOf(route.charAt(i));
+            if (right.equals("R"))
+                count++;
+        }
+        return count;
     }
 
     public static String generateRoute(String letters, int length) {
