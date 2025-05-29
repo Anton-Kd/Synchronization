@@ -8,28 +8,22 @@ public class Main {
     static int maxValue = 0;
 
     public static void main(String[] args) throws InterruptedException {
-
-        String[] routes = new String[NUMBER_OF_ROUTES];
-        for (int i = 0; i < routes.length; i++) {
-            routes[i] = generateRoute("RLRFR", 100);
-        }
         Thread countingThread;
         Thread countMaximum;
-        countingThread = new Thread(() -> {
-            for (String route : routes) {
+        List<Thread> threads = new ArrayList<>();
 
-                int count = 0;
-                for (int j = 0; j < route.length(); j++) {
-                    String right = String.valueOf(route.charAt(j));
-                    if (right.equals("R"))
-                        count++;
-                }
+        for (int i = 0; i < NUMBER_OF_ROUTES; i++) {
+            countingThread = new Thread(() -> {
+                int count = countSymbol_R(generateRoute("RLRFR", 100));
                 synchronized (sizeToFreq) {
                     sizeToFreq.merge(count, 1, Integer::sum);
                     sizeToFreq.notify();
                 }
-            }
-        });
+            });
+            countingThread.start();
+            threads.add(countingThread);
+            countingThread.interrupt();
+        }
 
         countMaximum = new Thread(() -> {
             synchronized (sizeToFreq) {
@@ -46,16 +40,26 @@ public class Main {
                             System.out.printf("Новый лидер %d (встретилось %d раз)\n", maxKey, maxValue);
                         }
                     }
-
                 }
             }
         });
-        countingThread.start();
         countMaximum.start();
-        countingThread.join();
-        countingThread.interrupt();
+        for (Thread thread : threads) {
+            thread.join();
+        }
         countMaximum.interrupt();
     }
+
+    public static int countSymbol_R(String route) {
+        int count = 0;
+        for (int i = 0; i < route.length(); i++) {
+            String right = String.valueOf(route.charAt(i));
+            if (right.equals("R"))
+                count++;
+        }
+        return count;
+    }
+
 
     public static String generateRoute(String letters, int length) {
         Random random = new Random();
@@ -63,6 +67,7 @@ public class Main {
         for (int i = 0; i < length; i++) {
             route.append(letters.charAt(random.nextInt(letters.length())));
         }
+
         return route.toString();
     }
 }
